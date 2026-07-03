@@ -1,0 +1,9 @@
+{
+  "domain": "system_exporter",
+  "name": "System Metrics Exporter",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/example/system_exporter",
+  "iot_class": "local_polling",
+  "version": "1.0.0"
+}
