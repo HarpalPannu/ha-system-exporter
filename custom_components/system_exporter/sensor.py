@@ -70,6 +70,7 @@ class SystemExporterDataCoordinator:
         self.hass = hass
         self.url = url
         self.data = {}
+        self.available = True
         self._failed_attempts = 0
 
     async def async_update(self):
@@ -80,6 +81,7 @@ class SystemExporterDataCoordinator:
                     async with session.get(self.url) as response:
                         if response.status == 200:
                             self.data = await response.json()
+                            self.available = True
                             self._failed_attempts = 0
                         else:
                             _LOGGER.warning("Error fetching data from %s: %s", self.url, response.status)
@@ -93,7 +95,7 @@ class SystemExporterDataCoordinator:
         self._failed_attempts += 1
         if self._failed_attempts > 5:
             _LOGGER.warning("Connection to System Exporter failed 5 times in a row. Marking entities as unavailable.")
-            self.data = {}
+            self.available = False
 
 
 class SystemExporterSensor(SensorEntity):
@@ -117,6 +119,11 @@ class SystemExporterSensor(SensorEntity):
     @property
     def unique_id(self):
         return f"{self._entry_id}_{self._key}"
+
+    @property
+    def available(self):
+        """Return True if the API server is reachable."""
+        return self.coordinator.available
 
     @property
     def state(self):
