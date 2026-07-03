@@ -12,6 +12,7 @@ from homeassistant.const import (
     CONF_HOST,
     PERCENTAGE,
 )
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import DOMAIN
@@ -124,3 +125,14 @@ class SystemExporterSensor(SensorEntity):
     @property
     def state_class(self):
         return self._state_class
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device registry information for this entity."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._entry_id)},
+            name=self._entry_name,
+            manufacturer="Harpal",
+            model="Go System Exporter",
+            sw_version="1.0.0",
+        )
