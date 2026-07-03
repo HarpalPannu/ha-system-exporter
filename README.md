@@ -1,5 +1,8 @@
 # Home Assistant System Metrics Exporter Custom Integration
 
+> [!CAUTION]
+> This is a personal hobby project. It is provided "as is" without any warranty, express or implied. The author takes no responsibility for system stability, security, or data integrity. Use at your own risk.
+
 This custom integration fetches system metrics from the lightweight Go System Metrics Exporter API and integrates them natively as Home Assistant entities.
 
 ## Features
