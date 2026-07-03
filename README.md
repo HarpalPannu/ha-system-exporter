@@ -17,7 +17,7 @@ To add this integration using HACS (Home Assistant Community Store):
 1. In Home Assistant, navigate to **HACS** -> **Integrations**.
 2. Click the three dots in the top right corner and select **Custom repositories**.
 3. In the dialog:
-   - **Repository:** Enter the URL of this Git repository (e.g., `https://github.com/<your-username>/ha-system-exporter`).
+   - **Repository:** Enter the URL of this Git repository: `https://github.com/HarpalPannu/ha-system-exporter`
    - **Category:** Select **Integration**.
 4. Click **Add**.
 
