@@ -42,6 +42,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
         SystemExporterSensor(coordinator, "network_tx_mbps", "Network TX Speed", "MB/s", "mdi:upload-network", None, SensorStateClass.MEASUREMENT, entry.entry_id),
         SystemExporterSensor(coordinator, "rpi_undervoltage", "RPi Under-voltage", None, "mdi:flash", None, None, entry.entry_id),
         SystemExporterSensor(coordinator, "rpi_throttled", "RPi Throttled", None, "mdi:speedometer-slow", None, None, entry.entry_id),
+        SystemExporterSensor(coordinator, "rpi_undervoltage_has_occurred", "RPi Under-voltage Occurred", None, "mdi:flash-alert", None, None, entry.entry_id),
+        SystemExporterSensor(coordinator, "rpi_throttled_has_occurred", "RPi Throttled Occurred", None, "mdi:speedometer-slow", None, None, entry.entry_id),
     ]
     
     async_add_entities(sensors, True)
