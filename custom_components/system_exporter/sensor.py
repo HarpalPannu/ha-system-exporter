@@ -70,6 +70,7 @@ class SystemExporterDataCoordinator:
         self.hass = hass
         self.url = url
         self.data = {}
+        self._failed_attempts = 0
 
     async def async_update(self):
         """Fetch data from the REST API."""
@@ -79,11 +80,19 @@ class SystemExporterDataCoordinator:
                     async with session.get(self.url) as response:
                         if response.status == 200:
                             self.data = await response.json()
+                            self._failed_attempts = 0
                         else:
                             _LOGGER.warning("Error fetching data from %s: %s", self.url, response.status)
-                            self.data = {}
+                            self._handle_failure()
         except Exception as err:
             _LOGGER.warning("Failed to connect to System Exporter at %s: %s", self.url, err)
+            self._handle_failure()
+
+    def _handle_failure(self):
+        """Handle fetch failure with a retry threshold before marking unavailable."""
+        self._failed_attempts += 1
+        if self._failed_attempts > 5:
+            _LOGGER.warning("Connection to System Exporter failed 5 times in a row. Marking entities as unavailable.")
             self.data = {}
 
 
