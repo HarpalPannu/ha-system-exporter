@@ -4,7 +4,7 @@ import aiohttp
 import async_timeout
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_NAME
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_SCAN_INTERVAL
 from homeassistant.core import callback
 
 from .const import DOMAIN
@@ -22,6 +22,7 @@ class SystemExporterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST].rstrip("/")
             name = user_input[CONF_NAME]
+            scan_interval = user_input.get(CONF_SCAN_INTERVAL, 30)
             if not host.startswith("http://") and not host.startswith("https://"):
                 host = f"http://{host}"
 
@@ -39,6 +40,7 @@ class SystemExporterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                     data={
                                         CONF_HOST: host,
                                         CONF_NAME: name,
+                                        CONF_SCAN_INTERVAL: scan_interval,
                                     },
                                 )
                             errors["base"] = "cannot_connect"
@@ -50,6 +52,7 @@ class SystemExporterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_NAME, default="System Exporter"): str,
                 vol.Required(CONF_HOST, default="http://localhost:8080"): str,
+                vol.Required(CONF_SCAN_INTERVAL, default=30): vol.All(vol.Coerce(int), vol.Range(min=1)),
             }
         )
 
@@ -76,6 +79,7 @@ class SystemExporterOptionsFlowHandler(config_entries.OptionsFlow):
         errors = {}
         if user_input is not None:
             host = user_input[CONF_HOST].rstrip("/")
+            scan_interval = user_input[CONF_SCAN_INTERVAL]
             if not host.startswith("http://") and not host.startswith("https://"):
                 host = f"http://{host}"
 
@@ -88,9 +92,12 @@ class SystemExporterOptionsFlowHandler(config_entries.OptionsFlow):
                         async with session.get(url) as response:
                             if response.status == 200:
                                 await response.json()
-                                # Update entry data (the main entry data hosts the URL)
-                                # To persist and update, we merge user_input into entry data
-                                new_data = {**self.config_entry.data, CONF_HOST: host}
+                                # Update entry data (the main entry data hosts the URL and scan interval)
+                                new_data = {
+                                    **self.config_entry.data,
+                                    CONF_HOST: host,
+                                    CONF_SCAN_INTERVAL: scan_interval,
+                                }
                                 self.hass.config_entries.async_update_entry(
                                     self.config_entry, data=new_data
                                 )
@@ -100,12 +107,14 @@ class SystemExporterOptionsFlowHandler(config_entries.OptionsFlow):
                 errors["base"] = "cannot_connect"
 
         current_host = self.config_entry.data.get(CONF_HOST, "http://localhost:8080")
+        current_scan_interval = self.config_entry.data.get(CONF_SCAN_INTERVAL, 30)
         
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_HOST, default=current_host): str,
+                    vol.Required(CONF_SCAN_INTERVAL, default=current_scan_interval): vol.All(vol.Coerce(int), vol.Range(min=1)),
                 }
             ),
             errors=errors,

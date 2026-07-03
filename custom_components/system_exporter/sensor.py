@@ -10,6 +10,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     CONF_HOST,
+    CONF_SCAN_INTERVAL,
     PERCENTAGE,
 )
 from homeassistant.helpers.entity import DeviceInfo
@@ -19,13 +20,15 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL_DURATION = timedelta(seconds=30)
-
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up System Exporter sensors based on a config entry."""
     host = entry.options.get(CONF_HOST, entry.data.get(CONF_HOST))
     url = f"{host}/api/system"
     entry_name = entry.title
+    
+    # Retrieve dynamic scan interval from config entry settings
+    scan_interval = entry.options.get(CONF_SCAN_INTERVAL, entry.data.get(CONF_SCAN_INTERVAL, 30))
+    scan_interval_duration = timedelta(seconds=scan_interval)
     
     coordinator = SystemExporterDataCoordinator(hass, url)
     await coordinator.async_update()
@@ -57,7 +60,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         for sensor in sensors:
             sensor.async_write_ha_state()
             
-    async_track_time_interval(hass, update_sensors, SCAN_INTERVAL_DURATION)
+    async_track_time_interval(hass, update_sensors, scan_interval_duration)
 
 
 class SystemExporterDataCoordinator:
