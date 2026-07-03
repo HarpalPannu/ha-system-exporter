@@ -64,11 +64,15 @@ class SystemExporterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         """Get the options flow for this handler."""
-        return SystemExporterOptionsFlowHandler()
+        return SystemExporterOptionsFlowHandler(config_entry)
 
 
 class SystemExporterOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for System Exporter."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -99,11 +103,11 @@ class SystemExporterOptionsFlowHandler(config_entries.OptionsFlow):
             except Exception:
                 errors["base"] = "cannot_connect"
 
-        current_host = self.config_entry.options.get(
-            CONF_HOST, self.config_entry.data.get(CONF_HOST, "http://localhost:8080")
+        current_host = self._config_entry.options.get(
+            CONF_HOST, self._config_entry.data.get(CONF_HOST, "http://localhost:8080")
         )
-        current_scan_interval = self.config_entry.options.get(
-            CONF_SCAN_INTERVAL, self.config_entry.data.get(CONF_SCAN_INTERVAL, 30)
+        current_scan_interval = self._config_entry.options.get(
+            CONF_SCAN_INTERVAL, self._config_entry.data.get(CONF_SCAN_INTERVAL, 30)
         )
         
         return self.async_show_form(
