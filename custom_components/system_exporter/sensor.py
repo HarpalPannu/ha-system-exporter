@@ -81,8 +81,10 @@ class SystemExporterDataCoordinator:
                             self.data = await response.json()
                         else:
                             _LOGGER.warning("Error fetching data from %s: %s", self.url, response.status)
+                            self.data = {}
         except Exception as err:
             _LOGGER.warning("Failed to connect to System Exporter at %s: %s", self.url, err)
+            self.data = {}
 
 
 class SystemExporterSensor(SensorEntity):
