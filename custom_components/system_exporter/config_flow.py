@@ -4,7 +4,7 @@ import aiohttp
 import async_timeout
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST
+from homeassistant.const import CONF_HOST, CONF_NAME
 
 from .const import DOMAIN
 
@@ -20,6 +20,7 @@ class SystemExporterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             host = user_input[CONF_HOST].rstrip("/")
+            name = user_input[CONF_NAME]
             if not host.startswith("http://") and not host.startswith("https://"):
                 host = f"http://{host}"
 
@@ -33,8 +34,11 @@ class SystemExporterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             if response.status == 200:
                                 await response.json()
                                 return self.async_create_entry(
-                                    title=f"System Exporter ({user_input[CONF_HOST]})",
-                                    data={CONF_HOST: host},
+                                    title=name,
+                                    data={
+                                        CONF_HOST: host,
+                                        CONF_NAME: name,
+                                    },
                                 )
                             errors["base"] = "cannot_connect"
             except Exception:
@@ -43,6 +47,7 @@ class SystemExporterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Default UI schema
         data_schema = vol.Schema(
             {
+                vol.Required(CONF_NAME, default="System Exporter"): str,
                 vol.Required(CONF_HOST, default="http://localhost:8080"): str,
             }
         )

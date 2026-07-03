@@ -25,25 +25,26 @@ async def async_setup_entry(hass, entry, async_add_entities):
     config = entry.data
     host = config[CONF_HOST]
     url = f"{host}/api/system"
+    entry_name = entry.title
     
     coordinator = SystemExporterDataCoordinator(hass, url)
     await coordinator.async_update()
     
     sensors = [
-        SystemExporterSensor(coordinator, "cpu_load", "CPU Load", PERCENTAGE, "mdi:cpu-64-bit", None, SensorStateClass.MEASUREMENT, entry.entry_id),
-        SystemExporterSensor(coordinator, "cpu_temp_c", "CPU Temperature", "°C", "mdi:thermometer", SensorDeviceClass.TEMPERATURE, SensorStateClass.MEASUREMENT, entry.entry_id),
-        SystemExporterSensor(coordinator, "ram_available_mb", "RAM Available", "MB", "mdi:memory", None, SensorStateClass.MEASUREMENT, entry.entry_id),
-        SystemExporterSensor(coordinator, "uptime", "Uptime", None, "mdi:clock-start", SensorDeviceClass.TIMESTAMP, None, entry.entry_id),
-        SystemExporterSensor(coordinator, "load_1m", "Load (1m)", None, "mdi:speedometer-slow", None, SensorStateClass.MEASUREMENT, entry.entry_id),
-        SystemExporterSensor(coordinator, "load_5m", "Load (5m)", None, "mdi:speedometer-medium", None, SensorStateClass.MEASUREMENT, entry.entry_id),
-        SystemExporterSensor(coordinator, "load_15m", "Load (15m)", None, "mdi:speedometer", None, SensorStateClass.MEASUREMENT, entry.entry_id),
-        SystemExporterSensor(coordinator, "disk_usage_percent", "Disk Usage", PERCENTAGE, "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id),
-        SystemExporterSensor(coordinator, "network_rx_mbps", "Network RX Speed", "MB/s", "mdi:download-network", None, SensorStateClass.MEASUREMENT, entry.entry_id),
-        SystemExporterSensor(coordinator, "network_tx_mbps", "Network TX Speed", "MB/s", "mdi:upload-network", None, SensorStateClass.MEASUREMENT, entry.entry_id),
-        SystemExporterSensor(coordinator, "rpi_undervoltage", "RPi Under-voltage", None, "mdi:flash", None, None, entry.entry_id),
-        SystemExporterSensor(coordinator, "rpi_throttled", "RPi Throttled", None, "mdi:speedometer-slow", None, None, entry.entry_id),
-        SystemExporterSensor(coordinator, "rpi_undervoltage_has_occurred", "RPi Under-voltage Occurred", None, "mdi:flash-alert", None, None, entry.entry_id),
-        SystemExporterSensor(coordinator, "rpi_throttled_has_occurred", "RPi Throttled Occurred", None, "mdi:speedometer-slow", None, None, entry.entry_id),
+        SystemExporterSensor(coordinator, "cpu_load", "CPU Load", PERCENTAGE, "mdi:cpu-64-bit", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "cpu_temp_c", "CPU Temperature", "°C", "mdi:thermometer", SensorDeviceClass.TEMPERATURE, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "ram_available_mb", "RAM Available", "MB", "mdi:memory", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "uptime", "Uptime", None, "mdi:clock-start", SensorDeviceClass.TIMESTAMP, None, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "load_1m", "Load (1m)", None, "mdi:speedometer-slow", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "load_5m", "Load (5m)", None, "mdi:speedometer-medium", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "load_15m", "Load (15m)", None, "mdi:speedometer", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "disk_usage_percent", "Disk Usage", PERCENTAGE, "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "network_rx_mbps", "Network RX Speed", "MB/s", "mdi:download-network", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "network_tx_mbps", "Network TX Speed", "MB/s", "mdi:upload-network", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "rpi_undervoltage", "RPi Under-voltage", None, "mdi:flash", None, None, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "rpi_throttled", "RPi Throttled", None, "mdi:speedometer-slow", None, None, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "rpi_undervoltage_has_occurred", "RPi Under-voltage Occurred", None, "mdi:flash-alert", None, None, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "rpi_throttled_has_occurred", "RPi Throttled Occurred", None, "mdi:speedometer-slow", None, None, entry.entry_id, entry_name),
     ]
     
     async_add_entities(sensors, True)
@@ -82,7 +83,7 @@ class SystemExporterDataCoordinator:
 class SystemExporterSensor(SensorEntity):
     """Representation of a System Exporter sensor."""
 
-    def __init__(self, coordinator, key, name, unit, icon, device_class, state_class, entry_id):
+    def __init__(self, coordinator, key, name, unit, icon, device_class, state_class, entry_id, entry_name):
         self.coordinator = coordinator
         self._key = key
         self._name = name
@@ -91,10 +92,11 @@ class SystemExporterSensor(SensorEntity):
         self._device_class = device_class
         self._state_class = state_class
         self._entry_id = entry_id
+        self._entry_name = entry_name
 
     @property
     def name(self):
-        return f"System {self._name}"
+        return f"{self._entry_name} {self._name}"
 
     @property
     def unique_id(self):
