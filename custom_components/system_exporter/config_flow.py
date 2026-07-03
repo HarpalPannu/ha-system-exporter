@@ -5,6 +5,7 @@ import async_timeout
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME
+from homeassistant.core import callback
 
 from .const import DOMAIN
 
@@ -54,4 +55,58 @@ class SystemExporterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user", data_schema=data_schema, errors=errors
+        )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return SystemExporterOptionsFlowHandler(config_entry)
+
+
+class SystemExporterOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle options flow for System Exporter."""
+
+    def __init__(self, config_entry):
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Manage the options."""
+        errors = {}
+        if user_input is not None:
+            host = user_input[CONF_HOST].rstrip("/")
+            if not host.startswith("http://") and not host.startswith("https://"):
+                host = f"http://{host}"
+
+            url = f"{host}/api/system"
+
+            # Validate the new URL
+            try:
+                async with async_timeout.timeout(10):
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(url) as response:
+                            if response.status == 200:
+                                await response.json()
+                                # Update entry data (the main entry data hosts the URL)
+                                # To persist and update, we merge user_input into entry data
+                                new_data = {**self.config_entry.data, CONF_HOST: host}
+                                self.hass.config_entries.async_update_entry(
+                                    self.config_entry, data=new_data
+                                )
+                                return self.async_create_entry(title="", data={})
+                            errors["base"] = "cannot_connect"
+            except Exception:
+                errors["base"] = "cannot_connect"
+
+        current_host = self.config_entry.data.get(CONF_HOST, "http://localhost:8080")
+        
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_HOST, default=current_host): str,
+                }
+            ),
+            errors=errors,
         )

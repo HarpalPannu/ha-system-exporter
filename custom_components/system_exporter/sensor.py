@@ -23,8 +23,7 @@ SCAN_INTERVAL_DURATION = timedelta(seconds=30)
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up System Exporter sensors based on a config entry."""
-    config = entry.data
-    host = config[CONF_HOST]
+    host = entry.options.get(CONF_HOST, entry.data.get(CONF_HOST))
     url = f"{host}/api/system"
     entry_name = entry.title
     
