@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 import aiohttp
+import async_timeout
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -14,7 +15,11 @@ from homeassistant.const import (
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+    DataUpdateCoordinator,
+    UpdateFailed,
+)
 
 from .const import DOMAIN
 
@@ -31,10 +36,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
     scan_interval = entry.options.get(CONF_SCAN_INTERVAL, entry.data.get(CONF_SCAN_INTERVAL, 30))
     scan_interval_duration = timedelta(seconds=scan_interval)
 
-    # Use Home Assistant's shared aiohttp session (managed lifecycle, connection pooling)
+    # Use Home Assistant's shared aiohttp session
     session = async_get_clientsession(hass)
-    coordinator = SystemExporterDataCoordinator(hass, url, session)
-    await coordinator.async_update()
+    
+    # Initialize the robust DataUpdateCoordinator
+    coordinator = SystemExporterDataCoordinator(hass, url, session, scan_interval_duration)
+
+    # Fetch initial data so we have state when entities are added
+    await coordinator.async_config_entry_first_refresh()
 
     sensors = [
         SystemExporterSensor(coordinator, "cpu_load", "CPU Load", PERCENTAGE, "mdi:cpu-64-bit", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
@@ -51,33 +60,24 @@ async def async_setup_entry(hass, entry, async_add_entities):
         SystemExporterSensor(coordinator, "network_tx_total_mb", "Network TX Total", "MB", "mdi:upload-network", None, SensorStateClass.TOTAL_INCREASING, entry.entry_id, entry_name),
     ]
 
-    # Only add RPi sensors if the API reports non-null values for RPi fields
+    # Dynamically add RPi sensors only if the API reports non-null RPi fields
     rpi_sensors_added = False
-    if coordinator.data.get("rpi_undervoltage") is not None:
+    if coordinator.data and coordinator.data.get("rpi_undervoltage") is not None:
         sensors.extend(_create_rpi_sensors(coordinator, entry.entry_id, entry_name))
         rpi_sensors_added = True
 
     async_add_entities(sensors, True)
 
-    # Schedule periodic updates
-    async def update_sensors(now):
+    # Callback listener for dynamically adding RPi sensors if they appear late
+    # (e.g. if the API was offline during the very first boot)
+    def handle_coordinator_update() -> None:
         nonlocal rpi_sensors_added
-        await coordinator.async_update()
-
-        # Dynamically add RPi sensors if they appear after boot
-        # (handles case where API was slow to start when HA booted)
-        if not rpi_sensors_added and coordinator.data.get("rpi_undervoltage") is not None:
-            rpi_list = _create_rpi_sensors(coordinator, entry.entry_id, entry_name)
-            async_add_entities(rpi_list, True)
-            sensors.extend(rpi_list)
+        if not rpi_sensors_added and coordinator.data and coordinator.data.get("rpi_undervoltage") is not None:
+            new_sensors = _create_rpi_sensors(coordinator, entry.entry_id, entry_name)
+            async_add_entities(new_sensors, True)
             rpi_sensors_added = True
 
-        for sensor in sensors:
-            sensor.async_write_ha_state()
-
-    # Store the unsub callback and register it for cleanup on entry unload
-    unsub = async_track_time_interval(hass, update_sensors, scan_interval_duration)
-    entry.async_on_unload(unsub)
+    coordinator.async_add_listener(handle_coordinator_update)
 
 
 def _create_rpi_sensors(coordinator, entry_id, entry_name):
@@ -90,50 +90,54 @@ def _create_rpi_sensors(coordinator, entry_id, entry_name):
     ]
 
 
-class SystemExporterDataCoordinator:
-    """Coordinator to fetch data from the Go System Exporter API."""
+class SystemExporterDataCoordinator(DataUpdateCoordinator):
+    """Class to manage fetching data from the API securely and efficiently."""
 
-    def __init__(self, hass, url, session):
-        self.hass = hass
+    def __init__(self, hass, url, session, update_interval):
+        """Initialize the data updater."""
         self.url = url
-        self._session = session
-        self.data = {}
-        self.available = True
+        self.session = session
         self._failed_attempts = 0
 
-    async def async_update(self):
-        """Fetch data from the REST API using the shared HA session."""
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=update_interval,
+        )
+
+    async def _async_update_data(self):
+        """Fetch data from API endpoint."""
         try:
-            async with self._session.get(self.url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                if response.status == 200:
-                    self.data = await response.json()
-                    self.available = True
-                    self._failed_attempts = 0
-                else:
-                    _LOGGER.warning("Error fetching data from %s: %s", self.url, response.status)
-                    self._handle_failure()
+            async with async_timeout.timeout(10):
+                async with self.session.get(self.url) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    
+                    # Reset failure count on success
+                    if self._failed_attempts > 0:
+                        _LOGGER.info("Connection to System Exporter restored.")
+                        self._failed_attempts = 0
+                        
+                    return data
         except Exception as err:
-            _LOGGER.warning("Failed to connect to System Exporter at %s: %s", self.url, err)
-            self._handle_failure()
-
-    def _handle_failure(self):
-        """Handle fetch failure with a retry threshold before marking unavailable."""
-        self._failed_attempts += 1
-        if self._failed_attempts == 6:
-            _LOGGER.warning(
-                "Connection to System Exporter failed 5 times in a row. Marking entities as unavailable."
-            )
-            self.available = False
+            self._failed_attempts += 1
+            if self._failed_attempts <= 5:
+                # Return last known data to tolerate transient drops
+                _LOGGER.debug("Transient API drop (%s/5): %s", self._failed_attempts, err)
+                if self.data:
+                    return self.data
+            
+            # After 5 failures, actually raise the error which marks entities as Unavailable
+            raise UpdateFailed(f"Error communicating with API: {err}")
 
 
-class SystemExporterSensor(SensorEntity):
-    """Representation of a System Exporter sensor."""
-
-    # Disable HA's built-in platform polling — we use async_track_time_interval instead
-    should_poll = False
+class SystemExporterSensor(CoordinatorEntity, SensorEntity):
+    """Native implementation of a System Exporter sensor using CoordinatorEntity."""
 
     def __init__(self, coordinator, key, name, unit, icon, device_class, state_class, entry_id, entry_name):
-        self.coordinator = coordinator
+        """Initialize the sensor."""
+        super().__init__(coordinator)
         self._key = key
         self._name = name
         self._unit = unit
@@ -145,38 +149,39 @@ class SystemExporterSensor(SensorEntity):
 
     @property
     def name(self):
+        """Return the formatted name of the sensor."""
         return f"{self._entry_name} {self._name}"
 
     @property
     def unique_id(self):
+        """Return a globally unique ID for the sensor."""
         return f"{self._entry_id}_{self._key}"
 
     @property
-    def available(self):
-        """Return True if the API server is reachable."""
-        return self.coordinator.available
-
-    @property
     def state(self):
-        val = self.coordinator.data.get(self._key)
-        if val is None:
+        """Return the state of the sensor."""
+        if not self.coordinator.data:
             return None
-        return val
+        return self.coordinator.data.get(self._key)
 
     @property
     def unit_of_measurement(self):
+        """Return the unit of measurement."""
         return self._unit
 
     @property
     def icon(self):
+        """Return the icon to use in the frontend."""
         return self._icon
 
     @property
     def device_class(self):
+        """Return the device class."""
         return self._device_class
 
     @property
     def state_class(self):
+        """Return the state class."""
         return self._state_class
 
     @property
