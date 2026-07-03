@@ -42,7 +42,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         SystemExporterSensor(coordinator, "load_1m", "Load (1m)", None, "mdi:speedometer-slow", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "load_5m", "Load (5m)", None, "mdi:speedometer-medium", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "load_15m", "Load (15m)", None, "mdi:speedometer", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "disk_usage_percent", "Disk Usage", PERCENTAGE, "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "disk_available_gb", "Disk Available", "GB", "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "disk_total_gb", "Disk Total Size", "GB", "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "network_rx_total_mb", "Network RX Total", "MB", "mdi:download-network", None, SensorStateClass.TOTAL_INCREASING, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "network_tx_total_mb", "Network TX Total", "MB", "mdi:upload-network", None, SensorStateClass.TOTAL_INCREASING, entry.entry_id, entry_name),
