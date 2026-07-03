@@ -46,11 +46,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
         SystemExporterSensor(coordinator, "disk_total_gb", "Disk Total Size", "GB", "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "network_rx_total_mb", "Network RX Total", "MB", "mdi:download-network", None, SensorStateClass.TOTAL_INCREASING, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "network_tx_total_mb", "Network TX Total", "MB", "mdi:upload-network", None, SensorStateClass.TOTAL_INCREASING, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "rpi_undervoltage", "RPi Under-voltage", None, "mdi:flash", None, None, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "rpi_throttled", "RPi Throttled", None, "mdi:speedometer-slow", None, None, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "rpi_undervoltage_has_occurred", "RPi Under-voltage Occurred", None, "mdi:flash-alert", None, None, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "rpi_throttled_has_occurred", "RPi Throttled Occurred", None, "mdi:speedometer-slow", None, None, entry.entry_id, entry_name),
     ]
+    
+    # Only add RPi sensors if the API reports non-null values (i.e. is_raspberry_pi is enabled)
+    if coordinator.data.get("rpi_undervoltage") is not None:
+        sensors.append(SystemExporterSensor(coordinator, "rpi_undervoltage", "RPi Under-voltage", None, "mdi:flash", None, None, entry.entry_id, entry_name))
+        sensors.append(SystemExporterSensor(coordinator, "rpi_throttled", "RPi Throttled", None, "mdi:speedometer-slow", None, None, entry.entry_id, entry_name))
+        sensors.append(SystemExporterSensor(coordinator, "rpi_undervoltage_has_occurred", "RPi Under-voltage Occurred", None, "mdi:flash-alert", None, None, entry.entry_id, entry_name))
+        sensors.append(SystemExporterSensor(coordinator, "rpi_throttled_has_occurred", "RPi Throttled Occurred", None, "mdi:speedometer-slow", None, None, entry.entry_id, entry_name))
     
     async_add_entities(sensors, True)
     
