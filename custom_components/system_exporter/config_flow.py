@@ -88,22 +88,23 @@ class SystemExporterOptionsFlowHandler(config_entries.OptionsFlow):
                         async with session.get(url) as response:
                             if response.status == 200:
                                 await response.json()
-                                # Update entry data (the main entry data hosts the URL and scan interval)
-                                new_data = {
-                                    **self.config_entry.data,
-                                    CONF_HOST: host,
-                                    CONF_SCAN_INTERVAL: scan_interval,
-                                }
-                                self.hass.config_entries.async_update_entry(
-                                    self.config_entry, data=new_data
+                                return self.async_create_entry(
+                                    title="",
+                                    data={
+                                        CONF_HOST: host,
+                                        CONF_SCAN_INTERVAL: scan_interval,
+                                    },
                                 )
-                                return self.async_create_entry(title="", data={})
                             errors["base"] = "cannot_connect"
             except Exception:
                 errors["base"] = "cannot_connect"
 
-        current_host = self.config_entry.data.get(CONF_HOST, "http://localhost:8080")
-        current_scan_interval = self.config_entry.data.get(CONF_SCAN_INTERVAL, 30)
+        current_host = self.config_entry.options.get(
+            CONF_HOST, self.config_entry.data.get(CONF_HOST, "http://localhost:8080")
+        )
+        current_scan_interval = self.config_entry.options.get(
+            CONF_SCAN_INTERVAL, self.config_entry.data.get(CONF_SCAN_INTERVAL, 30)
+        )
         
         return self.async_show_form(
             step_id="init",
