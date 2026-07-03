@@ -64,19 +64,11 @@ class SystemExporterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         """Get the options flow for this handler."""
-        return SystemExporterOptionsFlowHandler(config_entry)
+        return SystemExporterOptionsFlowHandler()
 
 
 class SystemExporterOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for System Exporter."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        try:
-            super().__init__(config_entry)
-        except TypeError:
-            super().__init__()
-            self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
