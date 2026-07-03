@@ -27,6 +27,10 @@ class SystemExporterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 host = f"http://{host}"
 
             url = f"{host}/api/system"
+
+            # Prevent duplicate entries for the same host
+            await self.async_set_unique_id(host)
+            self._abort_if_unique_id_configured()
             
             # Test connectivity before saving configuration
             try:

@@ -13,6 +13,9 @@
     },
     "error": {
       "cannot_connect": "Failed to connect to System Exporter API. Make sure the server is running and the URL is correct."
+    },
+    "abort": {
+      "already_configured": "This host is already configured."
     }
   },
   "options": {
