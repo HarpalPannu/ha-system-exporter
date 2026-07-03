@@ -40,6 +40,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
         SystemExporterSensor(coordinator, "disk_usage_percent", "Disk Usage", PERCENTAGE, "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id),
         SystemExporterSensor(coordinator, "network_rx_mbps", "Network RX Speed", "MB/s", "mdi:download-network", None, SensorStateClass.MEASUREMENT, entry.entry_id),
         SystemExporterSensor(coordinator, "network_tx_mbps", "Network TX Speed", "MB/s", "mdi:upload-network", None, SensorStateClass.MEASUREMENT, entry.entry_id),
+        SystemExporterSensor(coordinator, "rpi_undervoltage", "RPi Under-voltage", None, "mdi:flash", None, None, entry.entry_id),
+        SystemExporterSensor(coordinator, "rpi_throttled", "RPi Throttled", None, "mdi:speedometer-slow", None, None, entry.entry_id),
     ]
     
     async_add_entities(sensors, True)
