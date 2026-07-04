@@ -47,18 +47,18 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     sensors = [
         SystemExporterSensor(coordinator, "cpu_load", "CPU Load", PERCENTAGE, "mdi:cpu-64-bit", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "cpu_temp_c", "CPU Temperature", "°C", "mdi:thermometer", SensorDeviceClass.TEMPERATURE, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "ram_available_mb", "RAM Available", "MB", "mdi:memory", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "ram_total_mb", "RAM Total", "MB", "mdi:memory", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "ram_usage", "RAM Usage", PERCENTAGE, "mdi:memory", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "uptime", "Uptime", None, "mdi:clock-start", SensorDeviceClass.TIMESTAMP, None, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "load_1m", "Load (1m)", None, "mdi:speedometer-slow", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "load_5m", "Load (5m)", None, "mdi:speedometer-medium", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "load_15m", "Load (15m)", None, "mdi:speedometer", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "disk_available_gb", "Disk Available", "GB", "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
-        SystemExporterSensor(coordinator, "disk_total_gb", "Disk Total Size", "GB", "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "disk_usage", "Disk Usage", PERCENTAGE, "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "network_rx_total_mb", "Network RX Total", "MB", "mdi:download-network", None, SensorStateClass.TOTAL_INCREASING, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "network_tx_total_mb", "Network TX Total", "MB", "mdi:upload-network", None, SensorStateClass.TOTAL_INCREASING, entry.entry_id, entry_name),
     ]
+
+    # Dynamically add CPU Temp sensor only if the API reports a non-null temperature
+    cpu_temp_sensor_added = False
+    if coordinator.data and coordinator.data.get("cpu_temp_c") is not None:
+        sensors.append(SystemExporterSensor(coordinator, "cpu_temp_c", "CPU Temperature", "°C", "mdi:thermometer", SensorDeviceClass.TEMPERATURE, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name))
+        cpu_temp_sensor_added = True
 
     # Dynamically add RPi sensors only if the API reports non-null RPi fields
     rpi_sensors_added = False
@@ -68,14 +68,22 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     async_add_entities(sensors, True)
 
-    # Callback listener for dynamically adding RPi sensors if they appear late
+    # Callback listener for dynamically adding RPi/Temp sensors if they appear late
     # (e.g. if the API was offline during the very first boot)
     def handle_coordinator_update() -> None:
-        nonlocal rpi_sensors_added
+        nonlocal rpi_sensors_added, cpu_temp_sensor_added
+        new_sensors = []
+
+        if not cpu_temp_sensor_added and coordinator.data and coordinator.data.get("cpu_temp_c") is not None:
+            new_sensors.append(SystemExporterSensor(coordinator, "cpu_temp_c", "CPU Temperature", "°C", "mdi:thermometer", SensorDeviceClass.TEMPERATURE, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name))
+            cpu_temp_sensor_added = True
+
         if not rpi_sensors_added and coordinator.data and coordinator.data.get("rpi_undervoltage") is not None:
-            new_sensors = _create_rpi_sensors(coordinator, entry.entry_id, entry_name)
-            async_add_entities(new_sensors, True)
+            new_sensors.extend(_create_rpi_sensors(coordinator, entry.entry_id, entry_name))
             rpi_sensors_added = True
+
+        if new_sensors:
+            async_add_entities(new_sensors, True)
 
     coordinator.async_add_listener(handle_coordinator_update)
 
