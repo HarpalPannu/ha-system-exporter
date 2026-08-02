@@ -7,7 +7,7 @@ This custom integration fetches system metrics from the lightweight Go System Me
 
 ## Features
 - **UI Integration Setup:** Add, configure, and validate host details directly through Home Assistant's Settings UI (Config Flow).
-- **10 Core Sensors:** Exposes CPU Load, CPU Temp, RAM Available, Uptime, System Load (1m, 5m, 15m), Disk Usage, and Network speeds (RX/TX).
+- **Core Sensors:** Exposes CPU Load, CPU Load (1 Min Percentage), CPU Temp, RAM Usage, Uptime, Disk Usage, Network totals (RX/TX), and Raspberry Pi specific throttling sensors.
 - **Home Assistant Friendly:** Integrates natively using device classes (like `timestamp` for uptime, `temperature` for CPU temp), and provides custom icons.
 
 ---
