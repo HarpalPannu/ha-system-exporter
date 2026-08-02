@@ -47,6 +47,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     sensors = [
         SystemExporterSensor(coordinator, "cpu_load", "CPU Load", PERCENTAGE, "mdi:cpu-64-bit", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
+        SystemExporterSensor(coordinator, "cpu_load_1_min_percent", "CPU Load (1 Min)", PERCENTAGE, "mdi:cpu-64-bit", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "ram_usage", "RAM Usage", PERCENTAGE, "mdi:memory", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "uptime", "Uptime", None, "mdi:clock-start", SensorDeviceClass.TIMESTAMP, None, entry.entry_id, entry_name),
         SystemExporterSensor(coordinator, "disk_usage", "Disk Usage", PERCENTAGE, "mdi:harddisk", None, SensorStateClass.MEASUREMENT, entry.entry_id, entry_name),
